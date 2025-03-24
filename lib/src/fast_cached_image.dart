@@ -164,6 +164,11 @@ class _FastCachedImageState extends State<FastCachedImage>
 
   @override
   void initState() {
+    initialize();
+    super.initState();
+  }
+
+  void initialize() {
     _animationController =
         AnimationController(vsync: this, duration: widget.fadeInDuration);
     _animation = Tween<double>(
@@ -183,7 +188,6 @@ class _FastCachedImageState extends State<FastCachedImage>
       downloadedBytes: 0,
       isDownloading: false,
     );
-    super.initState();
   }
 
   void _animationListener(AnimationStatus status) {
@@ -191,6 +195,14 @@ class _FastCachedImageState extends State<FastCachedImage>
         mounted &&
         widget.fadeInDuration != Duration.zero) {
       setState(() => {});
+    }
+  }
+
+  @override
+  void didUpdateWidget(oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      initialize();
     }
   }
 
