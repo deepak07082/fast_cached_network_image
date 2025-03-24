@@ -28,7 +28,7 @@ Import it
 import 'package:fast_cache_network_image/fast_cache_network_image.dart';
 ```
 
-> This package uses [Hive](https://pub.dev/packages/hive_flutter) as cache container, which uses getApplicationDocumentsDirectory() to get the default path in case subDir is not specified
+> This package uses [Hive_ce](https://pub.dev/packages/hive_ce) as cache container, which uses getApplicationDocumentsDirectory() to get the default path in case subDir is not specified
 
 Initialize the cache configuration in the main function.
 ```dart
