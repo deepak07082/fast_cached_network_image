@@ -4,28 +4,28 @@
 A flutter package to cache network image easily, with loader, error builder, and smooth fade transitions.
 You can also add beautiful loaders and percentage indicators with the total and download size of the image.
 
-Use fast_cached_network_image: 1.2.9 (without "^") for projects with Flutter SDK version < 3.27.1.
+Use fast_cache_network_image: 1.0.2 (without "^") for projects with Flutter SDK version < 3.27.1.
 
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://pub.dev/packages/fast_cached_network_image)
-[![pub](https://img.shields.io/pub/v/fast_cached_network_image)](https://pub.dev/packages/fast_cached_network_image)
-[![dart](https://img.shields.io/badge/dart-pure%20dart-success)](https://pub.dev/packages/fast_cached_network_image)
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://pub.dev/packages/fast_cache_network_image)
+[![pub](https://img.shields.io/pub/v/fast_cache_network_image)](https://pub.dev/packages/fast_cache_network_image)
+[![dart](https://img.shields.io/badge/dart-pure%20dart-success)](https://pub.dev/packages/fast_cache_network_image)
 
 ## Screenshots
 
-![App caching](https://raw.githubusercontent.com/CHRISTOPANANJICKAL/fast_cached_network_image/main/gif%20images/fast-cache.gif)
+![App caching](https://raw.githubusercontent.com/deepak07082/fast_cached_network_image/main/gif%20images/fast-cache.gif)
 
-![Caching with fade in animation](https://raw.githubusercontent.com/CHRISTOPANANJICKAL/fast_cached_network_image/main/gif%20images/images-in-row.gif)
+![Caching with fade in animation](https://raw.githubusercontent.com/deepak07082/fast_cached_network_image/main/gif%20images/images-in-row.gif)
 
-![Caching with progress indicator and image  size](https://raw.githubusercontent.com/CHRISTOPANANJICKAL/fast_cached_network_image/main/gif%20images/fast%20cache%204.gif)
+![Caching with progress indicator and image  size](https://raw.githubusercontent.com/deepak07082/fast_cached_network_image/main/gif%20images/fast%20cache%204.gif)
 
-![The below gif displays a 30 MB image from cache](https://raw.githubusercontent.com/CHRISTOPANANJICKAL/fast_cached_network_image/main/gif%20images/image-with-shimmer.gif)
+![The below gif displays a 30 MB image from cache](https://raw.githubusercontent.com/deepak07082/fast_cached_network_image/main/gif%20images/image-with-shimmer.gif)
 Use [shimmer](https://pub.dev/packages/shimmer) package to create a beautiful loading widget.
 
 
 ## Usage
 Import it
 ```dart
-import 'package:fast_cached_network_image/fast_cached_network_image.dart';
+import 'package:fast_cache_network_image/fast_cache_network_image.dart';
 ```
 
 > This package uses [Hive](https://pub.dev/packages/hive_flutter) as cache container, which uses getApplicationDocumentsDirectory() to get the default path in case subDir is not specified
@@ -121,7 +121,7 @@ FastCachedImageProvider(url);
 ## Example
 
 ```dart
-import 'package:fast_cached_network_image/fast_cached_network_image.dart';
+import 'package:fast_cache_network_image/fast_cache_network_image.dart';
 import 'package:flutter/material.dart';
 
 void main() async {
@@ -263,5 +263,5 @@ Big thanks go to these wonderful people:
 
 ## Package on pub.dev
 
-[fast_cached_network_image](https://pub.dev/packages/fast_cached_network_image)
+[fast_cache_network_image](https://pub.dev/packages/fast_cache_network_image)
 

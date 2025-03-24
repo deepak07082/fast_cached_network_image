@@ -1,6 +1,6 @@
 name: fast_cache_network_image
 description: A flutter package to cache network image easily.You can add beautiful loaders, percentage indicators and error builder.
-version: 1.0.1+1
+version: 1.0.2
 homepage: https://github.com/deepak07082/fast_cached_network_image
 
 topics:

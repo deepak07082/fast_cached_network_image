@@ -1,4 +1,4 @@
-import 'package:fast_cached_network_image/fast_cached_network_image.dart';
+import 'package:fast_cache_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 void main() async {
