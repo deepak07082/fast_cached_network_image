@@ -6,116 +6,34 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/adapters.dart';
 import 'package:uuid/uuid.dart';
-
 import 'models/fast_cache_progress_data.dart';
 
 class FastCachedImage extends StatefulWidget {
-  ///Provide the [url] for the image to display.
   final String url;
-
-  ///Provide the [headers] for the image to display.
   final Map<String, dynamic>? headers;
-
-  ///[errorBuilder] must return a widget. This widget will be displayed if there is any error in downloading or displaying
-  ///the downloaded image
   final ImageErrorWidgetBuilder? errorBuilder;
-
-  ///[loadingBuilder] is the builder which can show the download progress of an image.
-
-  ///Usage: loadingBuilder(context, FastCachedProgressData progressData){return  Text('${progress.downloadedBytes ~/ 1024} / ${progress.totalBytes! ~/ 1024} kb')}
   final Widget Function(BuildContext, FastCachedProgressData)? loadingBuilder;
-
-  ///[fadeInDuration] can be adjusted to change the duration of the fade transition between the [loadingBuilder]
-  ///and the actual image. Default value is 500 ms.
   final Duration fadeInDuration;
-
   final int? cacheWidth;
   final int? cacheHeight;
-
-  /// If [cacheWidth] or [cacheHeight] are provided, it indicates to the
-  /// engine that the image must be decoded at the specified size. The image
-  /// will be rendered to the constraints of the layout or [width] and [height]
-  /// regardless of these parameters. These parameters are primarily intended
-  /// to reduce the memory usage of [ImageCache].
-  /// If non-null, this color is blended with each image pixel using [colorBlendMode].
-  /// If the image is of a high quality and its pixels are perfectly aligned
-  /// with the physical screen pixels, extra quality enhancement may not be
-  /// necessary. If so, then [FilterQuality.none] would be the most efficient.
-  ///[width] width of the image
   final double? width;
-
-  ///[height] of the image
   final double? height;
-
-  ///[scale] property in Flutter memory image.
   final double scale;
-
-  ///[color] property in Flutter memory image.
   final Color? color;
-
-  ///[opacity] property in Flutter memory image.
   final Animation<double>? opacity;
-
-  /// If the pixels are not perfectly aligned with the screen pixels, or if the
-  /// image itself is of a low quality, [FilterQuality.none] may produce
-  /// undesirable artifacts. Consider using other [FilterQuality] values to
-  /// improve the rendered image quality in this case. Pixels may be misaligned
-  /// with the screen pixels as a result of transforms or scaling.
-  /// [opacity] can be used to adjust the opacity of the image.
-  /// Used to combine [color] with this image.
   final FilterQuality filterQuality;
-
-  ///[colorBlendMode] property in Flutter memory image
   final BlendMode? colorBlendMode;
-
-  ///[fit] How a box should be inscribed into another box
   final BoxFit? fit;
-
-  /// The alignment aligns the given position in the image to the given position
-  /// in the layout bounds. For example, an [Alignment] alignment of (-1.0,
-  /// -1.0) aligns the image to the top-left corner of its layout bounds, while an
-  /// [Alignment] alignment of (1.0, 1.0) aligns the bottom right of the
-  /// image with the bottom right corner of its layout bounds. Similarly, an
-  /// alignment of (0.0, 1.0) aligns the bottom middle of the image with the
-  /// middle of the bottom edge of its layout bounds.
   final AlignmentGeometry alignment;
-
-  ///[repeat] property in Flutter memory image.
   final ImageRepeat repeat;
-
-  ///[centerSlice] property in Flutter memory image.
   final Rect? centerSlice;
-
-  ///[matchTextDirection] property in Flutter memory image.
   final bool matchTextDirection;
-
-  /// Whether to continue showing the old image (true), or briefly show nothing
-  /// (false), when the image provider changes. The default value is false.
-  ///
-  /// ## Design discussion
-  ///
-  /// ### Why is the default value of [gaplessPlayback] false?
-  ///
-  /// Having the default value of [gaplessPlayback] be false helps prevent
-  /// situations where stale or misleading information might be presented.
-  /// Consider the following case:
   final bool gaplessPlayback;
-
-  ///[semanticLabel] property in Flutter memory image.
   final String? semanticLabel;
-
-  ///[excludeFromSemantics] property in Flutter memory image.
   final bool excludeFromSemantics;
-
-  ///[isAntiAlias] property in Flutter memory image.
   final bool isAntiAlias;
-
-  ///[showErrorLog] can be set to true if you want to ignore error logs from the widget
   final bool showErrorLog;
 
-  ///[FastCachedImage] creates a widget to display network images. This widget downloads the network image
-  ///when this widget is build for the first time. Later whenever this widget is called the image will be displayed from
-  ///the downloaded database instead of the network. This can avoid unnecessary downloads and load images much faster.
   const FastCachedImage({
     required this.url,
     this.headers,
@@ -148,75 +66,91 @@ class FastCachedImage extends StatefulWidget {
   State<FastCachedImage> createState() => _FastCachedImageState();
 }
 
-class _FastCachedImageState extends State<FastCachedImage>
-    with TickerProviderStateMixin {
-  ///[_imageResponse] not public API.
+class _FastCachedImageState extends State<FastCachedImage> {
   _ImageResponse? _imageResponse;
-
-  ///[_animation] not public API.
-  late Animation<double> _animation;
-
-  ///[_animationController] not public API.
-  late AnimationController _animationController;
-
-  ///[_progressData] holds the data indicating the progress of download.
   late FastCachedProgressData _progressData;
 
   @override
   void initState() {
-    initialize();
     super.initState();
-  }
-
-  void initialize() {
-    _animationController =
-        AnimationController(vsync: this, duration: widget.fadeInDuration);
-    _animation = Tween<double>(
-      begin: widget.fadeInDuration == Duration.zero ? 1 : 0,
-      end: 1,
-    ).animate(_animationController);
-
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      _loadAsync(widget.url, widget.headers);
-      _animationController
-          .addStatusListener((status) => _animationListener(status));
-    });
-
     _progressData = FastCachedProgressData(
       progressPercentage: ValueNotifier(0),
       totalBytes: null,
       downloadedBytes: 0,
       isDownloading: false,
     );
-  }
 
-  void _animationListener(AnimationStatus status) {
-    if (status == AnimationStatus.completed &&
-        mounted &&
-        widget.fadeInDuration != Duration.zero) {
-      setState(() => {});
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadImage();
+    });
   }
 
   @override
-  void didUpdateWidget(oldWidget) {
+  void didUpdateWidget(covariant FastCachedImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url) {
-      initialize();
+    if (oldWidget.url != widget.url) _loadImage();
+  }
+
+  Future<void> _loadImage() async {
+    FastCachedImageConfig._checkInit();
+    final cachedImage = await FastCachedImageConfig._getImage(widget.url);
+    if (!mounted) return;
+
+    if (cachedImage != null) {
+      _imageResponse = _ImageResponse(imageData: cachedImage, error: null);
+      setState(() {});
+      return;
+    }
+
+    _progressData.isDownloading = true;
+
+    try {
+      final response = await Dio().get<Uint8List>(
+        widget.url,
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: widget.headers,
+        ),
+        onReceiveProgress: (received, total) {
+          if (total > 0) {
+            _progressData
+              ..downloadedBytes = received
+              ..totalBytes = total
+              ..progressPercentage.value =
+                  double.parse((received / total).toStringAsFixed(2));
+          }
+        },
+      );
+
+      if (!mounted || response.data == null) return;
+
+      if (response.statusCode != 200 || response.data!.isEmpty) {
+        _setError(
+          'Failed to load image: status ${response.statusCode ?? 'unknown'}',
+        );
+        return;
+      }
+
+      _imageResponse = _ImageResponse(imageData: response.data!, error: null);
+      _progressData.isDownloading = false;
+      setState(() {});
+      await FastCachedImageConfig._saveImage(widget.url, response.data!);
+    } catch (e) {
+      if (!mounted) return;
+      _setError(e.toString());
     }
   }
 
-  @override
-  void dispose() {
-    _animationController.removeListener(() => {});
-    _animationController.dispose();
-    super.dispose();
+  void _setError(String error) {
+    _imageResponse =
+        _ImageResponse(imageData: Uint8List.fromList([]), error: error);
+    if (widget.showErrorLog) debugPrint('$error - Image url : ${widget.url}');
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     if (_imageResponse?.error != null && widget.errorBuilder != null) {
-      _logErrors(_imageResponse?.error);
       return widget.errorBuilder!(
         context,
         Object,
@@ -224,192 +158,55 @@ class _FastCachedImageState extends State<FastCachedImage>
       );
     }
 
-    return SizedBox(
-      child: Stack(
-        alignment: Alignment.center,
-        fit: StackFit.passthrough,
-        children: [
-          if (_animationController.status != AnimationStatus.completed)
-            (widget.loadingBuilder != null)
-                ? ValueListenableBuilder(
-                    valueListenable: _progressData.progressPercentage,
-                    builder: (context, p, c) {
-                      return widget.loadingBuilder!(context, _progressData);
-                    },
-                  )
-                : const SizedBox(),
-          if (_imageResponse != null)
-            FadeTransition(
-              opacity: _animation,
-              child: Image.memory(
-                _imageResponse!.imageData,
-                color: widget.color,
-                width: widget.width,
-                height: widget.height,
-                alignment: widget.alignment,
-                key: widget.key,
-                cacheWidth: widget.cacheWidth,
-                cacheHeight: widget.cacheHeight,
-                fit: widget.fit,
-                errorBuilder: (a, c, v) {
-                  if (_animationController.status !=
-                      AnimationStatus.completed) {
-                    _animationController.forward();
-                    _logErrors(c);
-                    FastCachedImageConfig.deleteCachedImage(
-                      imageUrl: widget.url,
-                      showLog: widget.showErrorLog,
-                    );
-                  }
-                  return widget.errorBuilder != null
-                      ? widget.errorBuilder!(a, c, v)
-                      : const SizedBox();
-                },
-                centerSlice: widget.centerSlice,
-                colorBlendMode: widget.colorBlendMode,
-                excludeFromSemantics: widget.excludeFromSemantics,
-                filterQuality: widget.filterQuality,
-                gaplessPlayback: widget.gaplessPlayback,
-                isAntiAlias: widget.isAntiAlias,
-                matchTextDirection: widget.matchTextDirection,
-                opacity: widget.opacity,
-                repeat: widget.repeat,
-                scale: widget.scale,
-                semanticLabel: widget.semanticLabel,
-                frameBuilder: (widget.loadingBuilder != null)
-                    ? (context, a, b, c) {
-                        if (b == null) {
-                          return widget.loadingBuilder!(
-                            context,
-                            FastCachedProgressData(
-                              progressPercentage:
-                                  _progressData.progressPercentage,
-                              totalBytes: _progressData.totalBytes,
-                              downloadedBytes: _progressData.downloadedBytes,
-                              isDownloading: false,
-                            ),
-                          );
-                        }
-
-                        if (_animationController.status !=
-                            AnimationStatus.completed) {
-                          _animationController.forward();
-                        }
-                        return a;
-                      }
-                    : null,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  ///[_loadAsync] Not public API.
-  Future<void> _loadAsync(String url, Map<String, dynamic>? headers) async {
-    FastCachedImageConfig._checkInit();
-    Uint8List? image = await FastCachedImageConfig._getImage(url);
-
-    if (!mounted) return;
-
-    if (image != null) {
-      setState(
-        () => _imageResponse = _ImageResponse(imageData: image, error: null),
-      );
-      if (widget.loadingBuilder == null) _animationController.forward();
-
-      return;
-    }
-
-    StreamController chunkEvents = StreamController();
-
-    try {
-      final Uri resolved = Uri.base.resolve(url);
-      Dio dio = Dio();
-
-      if (!mounted) return;
-
-      //set is downloading flag to true
-      _progressData.isDownloading = true;
-      if (widget.loadingBuilder != null && mounted) {
-        widget.loadingBuilder!(context, _progressData);
-      }
-      Response response = await dio.get(
-        url,
-        options: Options(responseType: ResponseType.bytes, headers: headers),
-        onReceiveProgress: (int received, int total) {
-          if (received < 0 || total < 0) return;
-          if (widget.loadingBuilder != null) {
-            _progressData.downloadedBytes = received;
-            _progressData.totalBytes = total;
-            double.parse((received / total).toStringAsFixed(2));
-            // _progress.value = tot != null ? _downloaded / _total! : 0;
-            _progressData.progressPercentage.value =
-                double.parse((received / total).toStringAsFixed(2));
-            if (mounted) widget.loadingBuilder!(context, _progressData);
-          }
-
-          chunkEvents.add(
-            ImageChunkEvent(
-              cumulativeBytesLoaded: received,
-              expectedTotalBytes: total,
-            ),
-          );
-        },
-      );
-
-      final Uint8List bytes = response.data;
-
-      if (response.statusCode != 200) {
-        String error = NetworkImageLoadException(
-          statusCode: response.statusCode ?? 0,
-          uri: resolved,
-        ).toString();
-        if (mounted) {
-          setState(
-            () => _imageResponse =
-                _ImageResponse(imageData: Uint8List.fromList([]), error: error),
-          );
-        }
-        return;
-      }
-
-      //set is downloading flag to false
-      _progressData.isDownloading = false;
-
-      if (bytes.isEmpty && mounted) {
-        setState(
-          () => _imageResponse =
-              _ImageResponse(imageData: bytes, error: 'Image is empty.'),
-        );
-        return;
-      }
-      if (mounted) {
-        setState(
-          () => _imageResponse = _ImageResponse(imageData: bytes, error: null),
-        );
-        if (widget.loadingBuilder == null) _animationController.forward();
-      }
-
-      await FastCachedImageConfig._saveImage(url, bytes);
-    } catch (e) {
-      if (mounted) {
-        setState(
-          () => _imageResponse = _ImageResponse(
-            imageData: Uint8List.fromList([]),
-            error: e.toString(),
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        if (_imageResponse == null && widget.loadingBuilder != null)
+          ValueListenableBuilder<double>(
+            valueListenable: _progressData.progressPercentage,
+            builder: (_, __, ___) =>
+                widget.loadingBuilder!(context, _progressData),
           ),
-        );
-      }
-    } finally {
-      if (!chunkEvents.isClosed) await chunkEvents.close();
-    }
-  }
-
-  void _logErrors(dynamic object) {
-    if (widget.showErrorLog) {
-      debugPrint('$object - Image url : ${widget.url}');
-    }
+        if (_imageResponse != null)
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: widget.fadeInDuration,
+            builder: (context, opacity, child) {
+              return Opacity(
+                opacity: opacity,
+                child: child,
+              );
+            },
+            child: Image.memory(
+              _imageResponse!.imageData,
+              width: widget.width,
+              height: widget.height,
+              fit: widget.fit,
+              alignment: widget.alignment,
+              color: widget.color,
+              opacity: widget.opacity,
+              cacheWidth: widget.cacheWidth,
+              cacheHeight: widget.cacheHeight,
+              centerSlice: widget.centerSlice,
+              colorBlendMode: widget.colorBlendMode,
+              excludeFromSemantics: widget.excludeFromSemantics,
+              filterQuality: widget.filterQuality,
+              gaplessPlayback: widget.gaplessPlayback,
+              isAntiAlias: widget.isAntiAlias,
+              matchTextDirection: widget.matchTextDirection,
+              repeat: widget.repeat,
+              scale: widget.scale,
+              semanticLabel: widget.semanticLabel,
+              errorBuilder: (a, b, c) {
+                _setError(b.toString());
+                return widget.errorBuilder != null
+                    ? widget.errorBuilder!(a, b, c)
+                    : const SizedBox();
+              },
+            ),
+          ),
+      ],
+    );
   }
 }
 
@@ -419,75 +216,68 @@ class _ImageResponse {
   _ImageResponse({required this.imageData, required this.error});
 }
 
-///[FastCachedImageConfig] is the class to manage and set the cache configurations.
 class FastCachedImageConfig {
-  static LazyBox? _imageKeyBox;
-  static LazyBox? _imageBox;
+  static LazyBox<Uint8List>? _imageBox;
+  static LazyBox<DateTime>? _imageKeyBox;
   static bool _isInitialized = false;
   static const String _notInitMessage =
-      'FastCachedImage is not initialized. Please use FastCachedImageConfig.init to initialize FastCachedImage';
+      'FastCachedImage is not initialized. Please call FastCachedImageConfig.init() first.';
 
-  ///[init] function initializes the cache management system. Use this code only once in the app in main to avoid errors.
-  /// You can provide a [subDir] where the boxes should be stored.
-  ///[clearCacheAfter] property is used to set a  duration after which the cache will be cleared.
-  ///Default value of [clearCacheAfter] is 7 days which means if [clearCacheAfter] is set to null,
-  /// an image cached today will be cleared when you open the app after 7 days from now.
+  /// Initialize Hive and cache boxes. Only call once in `main()`.
   static Future<void> init({String? subDir, Duration? clearCacheAfter}) async {
     if (_isInitialized) return;
 
     clearCacheAfter ??= const Duration(days: 7);
 
     await Hive.initFlutter(subDir);
-    _isInitialized = true;
+    _imageKeyBox = await Hive.openLazyBox<DateTime>(_BoxNames.imagesKeyBox);
+    _imageBox = await Hive.openLazyBox<Uint8List>(_BoxNames.imagesBox);
 
-    _imageKeyBox = await Hive.openLazyBox(_BoxNames.imagesKeyBox);
-    _imageBox = await Hive.openLazyBox(_BoxNames.imagesBox);
+    _isInitialized = true;
     await _clearOldCache(clearCacheAfter);
   }
 
+  /// Returns cached image if exists, otherwise null
   static Future<Uint8List?> _getImage(String url) async {
+    _checkInit();
     final key = _keyFromUrl(url);
-    if (_imageKeyBox!.keys.contains(url) && _imageBox!.containsKey(url)) {
-      // Migrating old keys to new keys
-      await _replaceImageKey(oldKey: url, newKey: key);
-      await _replaceOldImage(
-        oldKey: url,
-        newKey: key,
-        image: await _imageBox!.get(url),
-      );
+
+    if (_imageKeyBox!.containsKey(url) && _imageBox!.containsKey(url)) {
+      // Migrate old key to new key
+      final oldImage = await _imageBox!.get(url);
+      final date = await _imageKeyBox!.get(url);
+      if (oldImage != null && date != null) {
+        await _replaceImageKey(oldKey: url, newKey: key);
+        await _replaceOldImage(oldKey: url, newKey: key, image: oldImage);
+      }
     }
 
-    if (_imageKeyBox!.keys.contains(key) && _imageBox!.keys.contains(key)) {
-      Uint8List? data = await _imageBox!.get(key);
-      if (data == null || data.isEmpty) return null;
-
-      return data;
+    if (_imageKeyBox!.containsKey(key) && _imageBox!.containsKey(key)) {
+      final data = await _imageBox!.get(key);
+      return (data != null && data.isNotEmpty) ? data : null;
     }
 
     return null;
   }
 
-  ///[_saveImage] is to save an image to cache. Not part of public API.
+  /// Save image to cache
   static Future<void> _saveImage(String url, Uint8List image) async {
+    _checkInit();
     final key = _keyFromUrl(url);
-
-    await _imageKeyBox!.put(key, DateTime.now());
-    await _imageBox!.put(key, image);
+    await Future.wait([
+      _imageBox!.put(key, image),
+      _imageKeyBox!.put(key, DateTime.now()),
+    ]);
   }
 
-  ///[_clearOldCache] clears the old cache. Not part of public API.
-  static Future<void> _clearOldCache(Duration cleatCacheAfter) async {
-    DateTime today = DateTime.now();
-
+  /// Delete old cache
+  static Future<void> _clearOldCache(Duration clearAfter) async {
+    _checkInit();
+    final now = DateTime.now();
     for (final key in _imageKeyBox!.keys) {
-      DateTime? dateCreated = await _imageKeyBox!.get(key);
-
-      if (dateCreated == null) continue;
-
-      if (today.difference(dateCreated) > cleatCacheAfter) {
-        await _imageKeyBox!.delete(key);
-        await _imageBox!.delete(key);
-      }
+      final created = await _imageKeyBox!.get(key);
+      if (created == null || now.difference(created) <= clearAfter) continue;
+      await Future.wait([_imageBox!.delete(key), _imageKeyBox!.delete(key)]);
     }
   }
 
@@ -496,13 +286,11 @@ class FastCachedImageConfig {
     required String newKey,
   }) async {
     _checkInit();
-
-    DateTime? dateCreated = await _imageKeyBox!.get(oldKey);
-
+    final dateCreated = await _imageKeyBox!.get(oldKey);
     if (dateCreated == null) return;
-
-    _imageKeyBox!.delete(oldKey);
-    _imageKeyBox!.put(newKey, dateCreated);
+    await _imageKeyBox!
+      ..delete(oldKey)
+      ..put(newKey, dateCreated);
   }
 
   static Future<void> _replaceOldImage({
@@ -510,62 +298,52 @@ class FastCachedImageConfig {
     required String newKey,
     required Uint8List image,
   }) async {
-    await _imageBox!.delete(oldKey);
-    await _imageBox!.put(newKey, image);
+    _checkInit();
+    await Future.wait([
+      _imageBox!.delete(oldKey),
+      _imageBox!.put(newKey, image),
+    ]);
   }
 
-  ///[deleteCachedImage] function takes in a image [imageUrl] and removes the image corresponding to the url
-  /// from the cache if the image is present in the cache.
+  /// Delete a specific cached image
   static Future<void> deleteCachedImage({
     required String imageUrl,
     bool showLog = true,
   }) async {
     _checkInit();
-
     final key = _keyFromUrl(imageUrl);
-    if (_imageKeyBox!.keys.contains(key) && _imageBox!.keys.contains(key)) {
-      await _imageKeyBox!.delete(key);
-      await _imageBox!.delete(key);
-      if (showLog) {
-        debugPrint('FastCacheImage: Removed image $imageUrl from cache.');
-      }
+    if (_imageKeyBox!.containsKey(key) && _imageBox!.containsKey(key)) {
+      await Future.wait([_imageBox!.delete(key), _imageKeyBox!.delete(key)]);
+      if (showLog) debugPrint('FastCachedImage: Removed $imageUrl from cache.');
     }
   }
 
-  ///[clearAllCachedImages] function clears all cached images. This can be used in scenarios such as
-  ///logout functionality of your app, so that all cached images corresponding to the user's account is removed.
+  /// Clear all cache
   static Future<void> clearAllCachedImages({bool showLog = true}) async {
     _checkInit();
-    await _imageKeyBox!.deleteFromDisk();
-    await _imageBox!.deleteFromDisk();
-    if (showLog) debugPrint('FastCacheImage: All cache cleared.');
-    _imageKeyBox = await Hive.openLazyBox(_BoxNames.imagesKeyBox);
+    await Future.wait(
+      [_imageBox!.deleteFromDisk(), _imageKeyBox!.deleteFromDisk()],
+    );
+    if (showLog) debugPrint('FastCachedImage: All cache cleared.');
     _imageBox = await Hive.openLazyBox(_BoxNames.imagesBox);
+    _imageKeyBox = await Hive.openLazyBox(_BoxNames.imagesKeyBox);
   }
 
-  ///[_checkInit] method ensures the hive db is initialized. Not part of public API
+  /// Check if image is cached
+  static Future<bool> isCached({required String imageUrl}) async {
+    _checkInit();
+    final key = _keyFromUrl(imageUrl);
+    return _imageKeyBox!.containsKey(key) && _imageBox!.containsKey(key);
+  }
+
   static void _checkInit() {
-    if ((FastCachedImageConfig._imageKeyBox == null ||
-            !FastCachedImageConfig._imageKeyBox!.isOpen) ||
-        FastCachedImageConfig._imageBox == null ||
-        !FastCachedImageConfig._imageBox!.isOpen) {
+    if (!_isInitialized || _imageBox == null || _imageKeyBox == null) {
       throw Exception(_notInitMessage);
     }
   }
 
-  ///[isCached] returns a boolean indicating whether the given image is cached or not.
-  ///Returns true if cached, false if not.
-  static bool isCached({required String imageUrl}) {
-    _checkInit();
-
-    final key = _keyFromUrl(imageUrl);
-    if (_imageKeyBox!.containsKey(key) && _imageBox!.keys.contains(key)) {
-      return true;
-    }
-    return false;
-  }
-
-  static _keyFromUrl(String url) => const Uuid().v5(Namespace.url.value, url);
+  static String _keyFromUrl(String url) =>
+      const Uuid().v5(Namespace.url.value, url);
 }
 
 ///[_BoxNames] contains the name of the boxes. Not part of public API
@@ -577,45 +355,31 @@ class _BoxNames {
   static String imagesKeyBox = 'cachedImagesKeys';
 }
 
-/// The fast cached image implementation of [ImageProvider].
-@immutable
-class FastCachedImageProvider extends ImageProvider<NetworkImage>
-    implements NetworkImage {
-  /// Creates an object that fetches the image at the given URL.
-  ///
-  /// The arguments [url] and [scale] must not be null.
+class FastCachedImageProvider extends ImageProvider<FastCachedImageProvider> {
   const FastCachedImageProvider(this.url, {this.scale = 1.0, this.headers});
 
-  @override
   final String url;
-
-  @override
   final double scale;
-
-  @override
   final Map<String, String>? headers;
 
   @override
-  Future<FastCachedImageProvider> obtainKey(ImageConfiguration configuration) {
-    return SynchronousFuture<FastCachedImageProvider>(this);
-  }
+  Future<FastCachedImageProvider> obtainKey(ImageConfiguration configuration) =>
+      SynchronousFuture(this);
 
   @override
   ImageStreamCompleter loadImage(
-    NetworkImage key,
+    FastCachedImageProvider key,
     ImageDecoderCallback decode,
   ) {
-    final StreamController<ImageChunkEvent> chunkEvents =
-        StreamController<ImageChunkEvent>();
-
+    final chunkEvents = StreamController<ImageChunkEvent>();
     return MultiFrameImageStreamCompleter(
-      codec: _loadAsync(key as FastCachedImageProvider, chunkEvents, decode),
+      codec: _loadAsync(key, chunkEvents, decode),
       chunkEvents: chunkEvents.stream,
       scale: key.scale,
       debugLabel: key.url,
-      informationCollector: () => <DiagnosticsNode>[
+      informationCollector: () => [
         DiagnosticsProperty<ImageProvider>('Image provider', this),
-        DiagnosticsProperty<NetworkImage>('Image key', key),
+        DiagnosticsProperty<FastCachedImageProvider>('Image key', key),
       ],
     );
   }
@@ -627,71 +391,60 @@ class FastCachedImageProvider extends ImageProvider<NetworkImage>
   ) async {
     try {
       assert(key == this);
-      Dio dio = Dio();
-      FastCachedImageConfig._checkInit();
-      Uint8List? image = await FastCachedImageConfig._getImage(url);
-      if (image != null) {
-        final ui.ImmutableBuffer buffer =
-            await ui.ImmutableBuffer.fromUint8List(image);
-        return decode(buffer);
+      final bytes = await _fetchImageBytes();
+
+      if (bytes.isEmpty) {
+        throw Exception('NetworkImage is empty: ${Uri.base.resolve(key.url)}');
       }
 
-      final Uri resolved = Uri.base.resolve(key.url);
-
-      if (headers != null) dio.options.headers.addAll(headers!);
-      Response response = await dio.get(
-        url,
-        options: Options(responseType: ResponseType.bytes),
-        onReceiveProgress: (int received, int total) {
-          chunkEvents.add(
-            ImageChunkEvent(
-              cumulativeBytesLoaded: received,
-              expectedTotalBytes: total,
-            ),
-          );
-        },
-      );
-
-      final Uint8List bytes = response.data;
-      if (bytes.lengthInBytes == 0) {
-        throw Exception('NetworkImage is an empty file: $resolved');
-      }
-
-      final ui.ImmutableBuffer buffer =
-          await ui.ImmutableBuffer.fromUint8List(bytes);
-      await FastCachedImageConfig._saveImage(url, bytes);
+      final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
       return decode(buffer);
     } catch (e) {
-      // Depending on where the exception was thrown, the image cache may not
-      // have had a chance to track the key in the cache at all.
-      // Schedule a micro-task to give the cache a chance to add the key.
-      scheduleMicrotask(() {
-        PaintingBinding.instance.imageCache.evict(key);
-      });
+      scheduleMicrotask(() => PaintingBinding.instance.imageCache.evict(key));
       rethrow;
     } finally {
       await chunkEvents.close();
     }
   }
 
-  @override
-  bool operator ==(Object other) {
-    if (other.runtimeType != runtimeType) {
-      return false;
+  Future<Uint8List> _fetchImageBytes() async {
+    FastCachedImageConfig._checkInit();
+
+    // Check cache first
+    final cached = await FastCachedImageConfig._getImage(url);
+    if (cached != null) return cached;
+
+    // Fetch from network
+    final uri = Uri.base.resolve(url);
+    final dio = Dio();
+    if (headers != null) dio.options.headers.addAll(headers!);
+
+    final response = await dio.get<Uint8List>(
+      url,
+      options: Options(responseType: ResponseType.bytes),
+      onReceiveProgress: (received, total) {
+        // optionally handle chunk progress
+      },
+    );
+
+    final bytes = response.data;
+    if (bytes == null || bytes.isEmpty) {
+      throw Exception('NetworkImage failed or empty: $uri');
     }
-    return other is FastCachedImageProvider &&
-        other.url == url &&
-        other.scale == scale;
+
+    await FastCachedImageConfig._saveImage(url, bytes);
+    return bytes;
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is FastCachedImageProvider &&
+      other.url == url &&
+      other.scale == scale;
 
   @override
   int get hashCode => Object.hash(url, scale);
 
   @override
-  String toString() =>
-      '${objectRuntimeType(this, 'NetworkImage')}("$url", scale: $scale)';
-
-  @override
-  WebHtmlElementStrategy get webHtmlElementStrategy =>
-      WebHtmlElementStrategy.never;
+  String toString() => 'FastCachedImageProvider("$url", scale: $scale)';
 }

@@ -18,7 +18,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String url1 =
-      'https://storage.googleapis.com/cms-storage-bucket/d83012c34a8f88a64e2b.jpg';
+      'https://upload.wikimedia.org/wikipedia/commons/2/2d/Snake_River_%285mb%29.jpg';
 
   bool isImageCached = false;
   String? log;
@@ -31,6 +31,13 @@ class _MyAppState extends State<MyApp> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Container(
+                height: 150,
+                width: 150,
+                decoration: BoxDecoration(
+                    image:
+                        DecorationImage(image: FastCachedImageProvider(url1))),
+              ),
               SizedBox(
                 height: 150,
                 width: 150,
@@ -81,8 +88,8 @@ class _MyAppState extends State<MyApp> {
               MaterialButton(
                 onPressed: () async {
                   setState(
-                    () => isImageCached =
-                        FastCachedImageConfig.isCached(imageUrl: url1),
+                    () async => isImageCached =
+                        await FastCachedImageConfig.isCached(imageUrl: url1),
                   );
                 },
                 child: const Text('check image is cached or not'),
