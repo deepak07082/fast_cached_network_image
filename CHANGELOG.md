@@ -11,5 +11,6 @@
 * Bug Fixes
 
 ## 1.0.4
+## 1.0.5
 
 * Redundant code removed and the code has been optimized.
