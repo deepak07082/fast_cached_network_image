@@ -167,7 +167,6 @@ class _FastCachedImageState extends State<FastCachedImage> {
         alignment: Alignment.center,
         fit: StackFit.passthrough,
         children: [
-          // Shimmer Loading Effect
           if (_imageResponse == null)
             widget.loadingBuilder != null
                 ? ValueListenableBuilder(
