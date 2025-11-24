@@ -89,7 +89,7 @@ class _MyAppState extends State<MyApp> {
                 onPressed: () async {
                   setState(
                     () async => isImageCached =
-                        await FastCachedImageConfig.isCached(imageUrl: url1),
+                        FastCachedImageConfig.isCached(imageUrl: url1),
                   );
                 },
                 child: const Text('check image is cached or not'),
@@ -97,7 +97,7 @@ class _MyAppState extends State<MyApp> {
               const SizedBox(height: 12),
               MaterialButton(
                 onPressed: () async {
-                  await FastCachedImageConfig.deleteCachedImage(imageUrl: url1);
+                  FastCachedImageConfig.deleteCachedImage(imageUrl: url1);
                   setState(() => log = 'deleted image $url1');
                   await Future.delayed(
                     const Duration(seconds: 2),
@@ -109,7 +109,7 @@ class _MyAppState extends State<MyApp> {
               const SizedBox(height: 12),
               MaterialButton(
                 onPressed: () async {
-                  await FastCachedImageConfig.clearAllCachedImages();
+                  FastCachedImageConfig.clearAllCachedImages();
                   setState(() => log = 'All cached images deleted');
                   await Future.delayed(
                     const Duration(seconds: 2),

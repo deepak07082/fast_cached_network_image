@@ -1,15 +1,11 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../fast_cached_network_image.dart';
-import 'models/fast_cache_progress_data.dart';
 
 /// The fast cached lottie implementation.
 @immutable
@@ -51,6 +47,12 @@ class FastCachedLottie extends StatefulWidget {
   ///[repeat] can be used to set if the animation should repeat. Default is true.
   final bool repeat;
 
+  final void Function(LottieComposition)? onLoaded;
+
+  final bool? animate;
+
+  final Animation<double>? controller;
+
   ///[FastCachedLottie] creates a widget to display network lottie animations.
   const FastCachedLottie({
     required this.url,
@@ -63,6 +65,9 @@ class FastCachedLottie extends StatefulWidget {
     this.alignment,
     this.fadeInDuration = const Duration(milliseconds: 500),
     this.repeat = true,
+    this.onLoaded,
+    this.animate,
+    this.controller,
     super.key,
   });
 
@@ -262,6 +267,9 @@ class _FastCachedLottieState extends State<FastCachedLottie>
                     fit: widget.fit,
                     alignment: widget.alignment,
                     repeat: widget.repeat,
+                    onLoaded: widget.onLoaded,
+                    animate: widget.animate,
+                    controller: widget.controller,
                     errorBuilder: (context, error, stackTrace) {
                       _logErrors(error);
                       FastCachedImageConfig.deleteCachedImage(
