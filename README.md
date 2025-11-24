@@ -1,7 +1,7 @@
 
 # Fast Cached Network Image
 
-A flutter package to cache network image easily, with loader, error builder, and smooth fade transitions.
+A flutter package to cache network image, video and lottie easily, with loader, error builder, and smooth fade transitions.
 You can also add beautiful loaders and percentage indicators with the total and download size of the image.
 
 Use fast_cache_network_image: 1.0.2 (without "^") for projects with Flutter SDK version < 3.27.1.
@@ -118,16 +118,93 @@ FastCachedImageProvider(url);
 ```
 
 
+## FastCachedVideo
+
+You can use `FastCachedVideo` to play cached videos.
+
+```dart
+
+FastCachedVideoController? videoController;
+
+@override
+void initState() {
+  super.initState();
+  videoController = FastCachedVideoController(
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    loop: true,
+  );
+}
+
+
+FastCachedImage(
+  url: url1,
+  fit: BoxFit.cover,
+  fadeInDuration: const Duration(seconds: 1),
+  errorBuilder: (context, exception, stacktrace) {
+    return Text(stacktrace.toString());
+  },
+  loadingBuilder: (context, progress) {
+    debugPrint(
+      'Progress: ${progress.isDownloading} ${progress.downloadedBytes} / ${progress.totalBytes}',
+    );
+    return Container(
+      color: Colors.yellow,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (progress.isDownloading &&
+              progress.totalBytes != null)
+            Text(
+              '${progress.downloadedBytes ~/ 1024} / ${progress.totalBytes! ~/ 1024} kb',
+              style: const TextStyle(color: Colors.red),
+            ),
+          SizedBox(
+            width: 120,
+            height: 120,
+            child: CircularProgressIndicator(
+              color: Colors.red,
+              value: progress.progressPercentage.value,
+            ),
+          ),
+        ],
+      ),
+    );
+  },
+);
+```
+
+
+## FastCachedLottie
+
+You can use `FastCachedLottie` to display cached lottie animations.
+
+```dart
+FastCachedLottie(
+  url: url,
+  fit: BoxFit.cover,
+  loadingBuilder: (context, progress) {
+    return Center(
+      child: CircularProgressIndicator(
+        value: progress.progressPercentage.value,
+      ),
+    );
+  },
+  errorBuilder: (context, exception, stacktrace) {
+    return Text(exception.toString());
+  },
+);
+```
+
 ## Example
 
 ```dart
-import 'package:fast_cache_network_image/fast_cache_network_image.dart';
+import 'package:fast_cache_network_image/fast_cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await FastCachedImageConfig.init(clearCacheAfter: const Duration(days: 15));
+  await FastCachedImageConfig.init();
 
   runApp(const MyApp());
 }
@@ -140,95 +217,158 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String url1 = 'https://www.sefram.com/images/products/photos/hi_res/7202.jpg';
+  String url1 =
+      'https://upload.wikimedia.org/wikipedia/commons/2/2d/Snake_River_%285mb%29.jpg';
+  String lottieUrl =
+      'https://assets10.lottiefiles.com/packages/lf20_rot6gnmo.json';
 
   bool isImageCached = false;
   String? log;
+  FastCachedVideoController? videoController;
+
+  @override
+  void initState() {
+    super.initState();
+    videoController = FastCachedVideoController(
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      loop: true,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        home: Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    height: 150,
-                    width: 150,
-                    child: FastCachedImage(
-                      url: url1,
-                      fit: BoxFit.cover,
-                      fadeInDuration: const Duration(seconds: 1),
-                      errorBuilder: (context, exception, stacktrace) {
-                        return Text(stacktrace.toString());
-                      },
-                      loadingBuilder: (context, progress) {
-                        return Container(
-                          color: Colors.yellow,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              if (progress.isDownloading && progress.totalBytes != null)
-                                Text('${progress.downloadedBytes ~/ 1024} / ${progress.totalBytes! ~/ 1024} kb',
-                                    style: const TextStyle(color: Colors.red)),
-                              
-                              SizedBox(
-                                  width: 120,
-                                  height: 120,
-                                  child:
-                                  CircularProgressIndicator(color: Colors.red, value: progress.progressPercentage.value)),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-                  
-                  Text('Is image cached? = $isImageCached', style: const TextStyle(color: Colors.red)),
-                 
-                  const SizedBox(height: 12),
-                  
-                  Text(log ?? ''),
-
-                  const SizedBox(height: 120),
-
-                  MaterialButton(
-                    onPressed: () async {
-                      setState(() => isImageCached = FastCachedImageConfig.isCached(imageUrl: url1));
-                    },
-                    child: const Text('check image is cached or not'),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  MaterialButton(
-                    onPressed: () async {
-                      await FastCachedImageConfig.deleteCachedImage(imageUrl: url1);
-                      setState(() => log = 'deleted image $url1');
-                      await Future.delayed(const Duration(seconds: 2), () => setState(() => log = null));
-                    },
-                    child: const Text('delete cached image'),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  MaterialButton(
-                    onPressed: () async {
-                      await FastCachedImageConfig.clearAllCachedImages();
-                      setState(() => log = 'All cached images deleted');
-                      await Future.delayed(const Duration(seconds: 2), () => setState(() => log = null));
-                    },
-                    child: const Text('delete all cached images'),
-                  ),
-                ],
+      home: Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                height: 150,
+                width: 150,
+                decoration: BoxDecoration(
+                    image:
+                        DecorationImage(image: FastCachedImageProvider(url1))),
               ),
-            )));
+              SizedBox(
+                height: 150,
+                width: 150,
+                child: FastCachedImage(
+                  url: url1,
+                  fit: BoxFit.cover,
+                  fadeInDuration: const Duration(seconds: 1),
+                  errorBuilder: (context, exception, stacktrace) {
+                    return Text(stacktrace.toString());
+                  },
+                  loadingBuilder: (context, progress) {
+                    debugPrint(
+                      'Progress: ${progress.isDownloading} ${progress.downloadedBytes} / ${progress.totalBytes}',
+                    );
+                    return Container(
+                      color: Colors.yellow,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          if (progress.isDownloading &&
+                              progress.totalBytes != null)
+                            Text(
+                              '${progress.downloadedBytes ~/ 1024} / ${progress.totalBytes! ~/ 1024} kb',
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          SizedBox(
+                            width: 120,
+                            height: 120,
+                            child: CircularProgressIndicator(
+                              color: Colors.red,
+                              value: progress.progressPercentage.value,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 200,
+                width: 300,
+                child: FastCachedVideo(
+                  controller: videoController!,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, progress) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: progress.progressPercentage.value,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 150,
+                width: 150,
+                child: FastCachedLottie(
+                  url: lottieUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, progress) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: progress.progressPercentage.value,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Is image cached? = $isImageCached',
+                style: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 12),
+              Text(log ?? ''),
+              const SizedBox(height: 120),
+              MaterialButton(
+                onPressed: () async {
+                  setState(
+                    () async => isImageCached =
+                        FastCachedImageConfig.isCached(imageUrl: url1),
+                  );
+                },
+                child: const Text('check image is cached or not'),
+              ),
+              const SizedBox(height: 12),
+              MaterialButton(
+                onPressed: () async {
+                  FastCachedImageConfig.deleteCachedImage(imageUrl: url1);
+                  setState(() => log = 'deleted image $url1');
+                  await Future.delayed(
+                    const Duration(seconds: 2),
+                    () => setState(() => log = null),
+                  );
+                },
+                child: const Text('delete cached image'),
+              ),
+              const SizedBox(height: 12),
+              MaterialButton(
+                onPressed: () async {
+                  FastCachedImageConfig.clearAllCachedImages();
+                  setState(() => log = 'All cached images deleted');
+                  await Future.delayed(
+                    const Duration(seconds: 2),
+                    () => setState(() => log = null),
+                  );
+                },
+                child: const Text('delete all cached images'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
-
 
 ```
 

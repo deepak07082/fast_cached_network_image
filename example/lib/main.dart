@@ -19,9 +19,21 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   String url1 =
       'https://upload.wikimedia.org/wikipedia/commons/2/2d/Snake_River_%285mb%29.jpg';
+  String lottieUrl =
+      'https://lottie.host/2acd387a-4447-43c0-8a1f-5819777e33ef/fMNv4Pvyrx.json';
 
   bool isImageCached = false;
   String? log;
+  FastCachedVideoController? videoController;
+
+  @override
+  void initState() {
+    super.initState();
+    videoController = FastCachedVideoController(
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      loop: true,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +84,38 @@ class _MyAppState extends State<MyApp> {
                             ),
                           ),
                         ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 200,
+                width: 300,
+                child: FastCachedVideo(
+                  controller: videoController!,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, progress) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: progress.progressPercentage.value,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 150,
+                width: 150,
+                child: FastCachedLottie(
+                  url: lottieUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, progress) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: progress.progressPercentage.value,
                       ),
                     );
                   },
