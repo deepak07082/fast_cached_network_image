@@ -1,20 +1,18 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:video_player/video_player.dart';
 
 import '../fast_cached_network_image.dart';
-import 'models/fast_cache_progress_data.dart';
 
-/// The fast cached lottie implementation.
+/// The fast cached video implementation.
 @immutable
-class FastCachedLottie extends StatefulWidget {
-  ///[url] is the url of the lottie file (json or zip).
+class FastCachedVideo extends StatefulWidget {
+  ///[url] is the url of the video file.
   final String url;
 
   ///[headers] can be used to send headers with the request.
@@ -33,26 +31,31 @@ class FastCachedLottie extends StatefulWidget {
     FastCachedProgressData progressData,
   )? loadingBuilder;
 
-  ///[width] can be used to set the width of the lottie.
+  ///[width] can be used to set the width of the video.
   final double? width;
 
-  ///[height] can be used to set the height of the lottie.
+  ///[height] can be used to set the height of the video.
   final double? height;
 
-  ///[fit] can be used to set the fit of the lottie.
+  ///[fit] can be used to set the fit of the video.
   final BoxFit? fit;
 
-  ///[alignment] can be used to set the alignment of the lottie.
-  final AlignmentGeometry? alignment;
+  ///[alignment] can be used to set the alignment of the video.
+  final AlignmentGeometry alignment;
 
   ///[fadeInDuration] can be used to set the duration of the fade in animation.
   final Duration fadeInDuration;
 
-  ///[repeat] can be used to set if the animation should repeat. Default is true.
-  final bool repeat;
+  ///[autoPlay] can be used to set if the video should auto play. Default is true.
+  final bool autoPlay;
 
-  ///[FastCachedLottie] creates a widget to display network lottie animations.
-  const FastCachedLottie({
+  ///[loop] can be used to set if the video should loop. Default is true.
+  final bool loop;
+
+  final void Function(VideoPlayerController)? controller;
+
+  ///[FastCachedVideo] creates a widget to display network videos.
+  const FastCachedVideo({
     required this.url,
     this.headers,
     this.errorBuilder,
@@ -60,20 +63,23 @@ class FastCachedLottie extends StatefulWidget {
     this.width,
     this.height,
     this.fit,
-    this.alignment,
+    this.alignment = Alignment.center,
     this.fadeInDuration = const Duration(milliseconds: 500),
-    this.repeat = true,
+    this.autoPlay = true,
+    this.loop = true,
+    this.controller,
     super.key,
   });
 
   @override
-  State<FastCachedLottie> createState() => _FastCachedLottieState();
+  State<FastCachedVideo> createState() => _FastCachedVideoState();
 }
 
-class _FastCachedLottieState extends State<FastCachedLottie>
-    with TickerProviderStateMixin {
+class _FastCachedVideoState extends State<FastCachedVideo> {
+  VideoPlayerController? _controller;
   ImageResponse? _imageResponse;
   late FastCachedProgressData _progressData;
+  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -89,13 +95,17 @@ class _FastCachedLottieState extends State<FastCachedLottie>
 
   @override
   void dispose() {
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
-  void didUpdateWidget(covariant FastCachedLottie oldWidget) {
+  void didUpdateWidget(covariant FastCachedVideo oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.url != widget.url) {
+      _controller?.dispose();
+      _controller = null;
+      _isInitialized = false;
       _loadAsync(widget.url, widget.headers);
     }
   }
@@ -115,18 +125,10 @@ class _FastCachedLottieState extends State<FastCachedLottie>
       return;
     }
 
-    Uint8List? image = FastCachedImageConfig.getImage(url);
+    final file = FastCachedImageConfig.getCachedFile(url);
 
-    if (!mounted) return;
-
-    if (image != null) {
-      Future.delayed(widget.fadeInDuration, () {
-        if (mounted) {
-          setState(
-            () => _imageResponse = ImageResponse(imageData: image, error: null),
-          );
-        }
-      });
+    if (file.existsSync()) {
+      await _initializeController(file);
       return;
     }
 
@@ -181,17 +183,15 @@ class _FastCachedLottieState extends State<FastCachedLottie>
       if (bytes.isEmpty && mounted) {
         setState(
           () => _imageResponse =
-              ImageResponse(imageData: bytes, error: 'Lottie file is empty.'),
+              ImageResponse(imageData: bytes, error: 'Video file is empty.'),
         );
         return;
       }
-      if (mounted) {
-        setState(
-          () => _imageResponse = ImageResponse(imageData: bytes, error: null),
-        );
-      }
 
       FastCachedImageConfig.saveImage(url, bytes);
+      if (mounted) {
+        await _initializeController(file);
+      }
     } catch (e) {
       if (mounted) {
         setState(
@@ -206,9 +206,39 @@ class _FastCachedLottieState extends State<FastCachedLottie>
     }
   }
 
+  Future<void> _initializeController(File file) async {
+    try {
+      _controller = VideoPlayerController.file(file);
+      await _controller!.initialize();
+      if (widget.autoPlay) {
+        await _controller!.play();
+      }
+      widget.controller?.call(_controller!);
+
+      if (widget.loop) {
+        await _controller!.setLooping(true);
+      }
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+          _imageResponse = ImageResponse(imageData: Uint8List(0), error: null);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => _imageResponse = ImageResponse(
+            imageData: Uint8List.fromList([]),
+            error: 'Error initializing video: $e',
+          ),
+        );
+      }
+    }
+  }
+
   void _logErrors(dynamic error) {
     if (widget.errorBuilder != null) {
-      debugPrint('FastCachedLottie: $error');
+      debugPrint('FastCachedVideo: $error');
     }
   }
 
@@ -230,49 +260,44 @@ class _FastCachedLottieState extends State<FastCachedLottie>
         alignment: Alignment.center,
         fit: StackFit.passthrough,
         children: [
-          // // Loading Effect (Builder > Shimmer)
-          // if (_imageResponse == null)
-          //   widget.loadingBuilder != null
-          //       ? ValueListenableBuilder(
-          //           valueListenable: _progressData.progressPercentage,
-          //           builder: (context, p, c) {
-          //             return widget.loadingBuilder!(context, _progressData);
-          //           },
-          //         )
-          //       : Shimmer.fromColors(
-          //           baseColor: Colors.grey[300]!,
-          //           highlightColor: Colors.grey[100]!,
-          //           child: Container(
-          //             width: widget.width,
-          //             height: widget.height,
-          //             color: Colors.white,
-          //           ),
-          //         ),
+          // Loading Effect (Builder > Shimmer)
+          if (!_isInitialized)
+            widget.loadingBuilder != null
+                ? ValueListenableBuilder(
+                    valueListenable: _progressData.progressPercentage,
+                    builder: (context, p, c) {
+                      return widget.loadingBuilder!(context, _progressData);
+                    },
+                  )
+                : Shimmer.fromColors(
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(
+                      width: widget.width,
+                      height: widget.height,
+                      color: Colors.white,
+                    ),
+                  ),
 
-          // // Actual Lottie with FadeIn
+          // Actual Video with FadeIn
           AnimatedOpacity(
-            opacity: _imageResponse != null ? 1.0 : 0.0,
+            opacity: _isInitialized ? 1.0 : 0.0,
             duration: widget.fadeInDuration,
-            child: _imageResponse == null
-                ? const SizedBox()
-                : Lottie.memory(
-                    _imageResponse!.imageData,
+            child: _isInitialized && _controller != null
+                ? SizedBox(
                     width: widget.width,
                     height: widget.height,
-                    fit: widget.fit,
-                    alignment: widget.alignment,
-                    repeat: widget.repeat,
-                    errorBuilder: (context, error, stackTrace) {
-                      _logErrors(error);
-                      FastCachedImageConfig.deleteCachedImage(
-                        imageUrl: widget.url,
-                        showLog: true,
-                      );
-                      return widget.errorBuilder != null
-                          ? widget.errorBuilder!(context, error, stackTrace)
-                          : const SizedBox();
-                    },
-                  ),
+                    child: FittedBox(
+                      fit: widget.fit ?? BoxFit.contain,
+                      alignment: widget.alignment,
+                      child: SizedBox(
+                        width: _controller!.value.size.width,
+                        height: _controller!.value.size.height,
+                        child: VideoPlayer(_controller!),
+                      ),
+                    ),
+                  )
+                : const SizedBox(),
           ),
         ],
       ),

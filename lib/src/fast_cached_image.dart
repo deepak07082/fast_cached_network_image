@@ -231,7 +231,7 @@ class _FastCachedImageState extends State<FastCachedImage> {
   }
 
   Future<void> _loadAsync(String url, Map<String, dynamic>? headers) async {
-    FastCachedImageConfig._checkInit();
+    FastCachedImageConfig.checkInit();
 
     if (url.isEmpty || Uri.tryParse(url) == null) {
       if (mounted) {
@@ -245,7 +245,7 @@ class _FastCachedImageState extends State<FastCachedImage> {
       return;
     }
 
-    Uint8List? image = FastCachedImageConfig._getImage(url);
+    Uint8List? image = FastCachedImageConfig.getImage(url);
 
     if (!mounted) return;
 
@@ -270,7 +270,7 @@ class _FastCachedImageState extends State<FastCachedImage> {
         widget.loadingBuilder!(context, _progressData);
       }
 
-      Response response = await FastCachedImageConfig._dio.get(
+      Response response = await FastCachedImageConfig.dio.get(
         url,
         options: Options(responseType: ResponseType.bytes, headers: headers),
         onReceiveProgress: (int received, int total) {
@@ -322,7 +322,7 @@ class _FastCachedImageState extends State<FastCachedImage> {
         );
       }
 
-      FastCachedImageConfig._saveImage(url, bytes);
+      FastCachedImageConfig.saveImage(url, bytes);
     } catch (e) {
       if (mounted) {
         setState(
@@ -356,7 +356,7 @@ class FastCachedImageConfig {
   static bool _isInitialized = false;
   static const String _notInitMessage =
       'FastCachedImage is not initialized. Please use FastCachedImageConfig.init to initialize FastCachedImage';
-  static final Dio _dio = Dio();
+  static final Dio dio = Dio();
 
   ///[init] function initializes the cache management system. Use this code only once in the app in main to avoid errors.
   /// You can provide a [subDir] where the boxes should be stored.
@@ -379,8 +379,8 @@ class FastCachedImageConfig {
     _clearOldCache(clearCacheAfter);
   }
 
-  static Uint8List? _getImage(String url) {
-    _checkInit();
+  static Uint8List? getImage(String url) {
+    checkInit();
     final file = _getFile(url);
     if (file.existsSync()) {
       return file.readAsBytesSync();
@@ -388,16 +388,16 @@ class FastCachedImageConfig {
     return null;
   }
 
-  ///[_saveImage] is to save an image to cache. Not part of public API.
-  static void _saveImage(String url, Uint8List image) {
-    _checkInit();
+  ///[saveImage] is to save an image to cache. Not part of public API.
+  static void saveImage(String url, Uint8List image) {
+    checkInit();
     final file = _getFile(url);
     file.writeAsBytesSync(image);
   }
 
   ///[_clearOldCache] clears the old cache. Not part of public API.
   static void _clearOldCache(Duration clearCacheAfter) {
-    _checkInit();
+    checkInit();
     DateTime today = DateTime.now();
 
     for (final file in _cacheDir!.listSync()) {
@@ -416,7 +416,7 @@ class FastCachedImageConfig {
     required String imageUrl,
     bool showLog = true,
   }) {
-    _checkInit();
+    checkInit();
     final file = _getFile(imageUrl);
     if (file.existsSync()) {
       file.deleteSync();
@@ -429,7 +429,7 @@ class FastCachedImageConfig {
   ///[clearAllCachedImages] function clears all cached images. This can be used in scenarios such as
   ///logout functionality of your app, so that all cached images corresponding to the user's account is removed.
   static void clearAllCachedImages({bool showLog = true}) {
-    _checkInit();
+    checkInit();
     if (_cacheDir!.existsSync()) {
       _cacheDir!.deleteSync(recursive: true);
       _cacheDir!.createSync();
@@ -437,8 +437,8 @@ class FastCachedImageConfig {
     }
   }
 
-  ///[_checkInit] method ensures the hive db is initialized. Not part of public API
-  static void _checkInit() {
+  ///[checkInit] method ensures the hive db is initialized. Not part of public API
+  static void checkInit() {
     if (!_isInitialized || _cacheDir == null) {
       throw Exception(_notInitMessage);
     }
@@ -447,7 +447,7 @@ class FastCachedImageConfig {
   ///[isCached] returns a boolean indicating whether the given image is cached or not.
   ///Returns true if cached, false if not.
   static bool isCached({required String imageUrl}) {
-    _checkInit();
+    checkInit();
     final file = _getFile(imageUrl);
     return file.existsSync();
   }
@@ -455,6 +455,13 @@ class FastCachedImageConfig {
   static File _getFile(String url) {
     final key = _keyFromUrl(url);
     return File('${_cacheDir!.path}/$key');
+  }
+
+  ///[getCachedFile] returns the file associated with the given url.
+  ///This method does not check if the file exists.
+  static File getCachedFile(String url) {
+    checkInit();
+    return _getFile(url);
   }
 
   static String _keyFromUrl(String url) =>
@@ -511,15 +518,17 @@ class FastCachedImageProvider extends ImageProvider<NetworkImage>
   ) async {
     try {
       assert(key == this);
-      FastCachedImageConfig._checkInit();
+      FastCachedImageConfig.checkInit();
 
       if (url.isEmpty || Uri.tryParse(url) == null) {
         // Throwing NetworkImageLoadException allows the Image widget to catch it and show the errorBuilder
         throw NetworkImageLoadException(
-            statusCode: 400, uri: Uri.parse(url.isEmpty ? 'empty' : url));
+          statusCode: 400,
+          uri: Uri.parse(url.isEmpty ? 'empty' : url),
+        );
       }
 
-      Uint8List? image = FastCachedImageConfig._getImage(url);
+      Uint8List? image = FastCachedImageConfig.getImage(url);
       if (image != null) {
         final ui.ImmutableBuffer buffer =
             await ui.ImmutableBuffer.fromUint8List(image);
@@ -536,7 +545,7 @@ class FastCachedImageProvider extends ImageProvider<NetworkImage>
         options.headers = headers;
       }
 
-      Response response = await FastCachedImageConfig._dio.get(
+      Response response = await FastCachedImageConfig.dio.get(
         url,
         options: options,
         onReceiveProgress: (int received, int total) {
@@ -556,7 +565,7 @@ class FastCachedImageProvider extends ImageProvider<NetworkImage>
 
       final ui.ImmutableBuffer buffer =
           await ui.ImmutableBuffer.fromUint8List(bytes);
-      FastCachedImageConfig._saveImage(url, bytes);
+      FastCachedImageConfig.saveImage(url, bytes);
       return decode(buffer);
     } catch (e) {
       // Depending on where the exception was thrown, the image cache may not
@@ -591,4 +600,10 @@ class FastCachedImageProvider extends ImageProvider<NetworkImage>
   @override
   WebHtmlElementStrategy get webHtmlElementStrategy =>
       WebHtmlElementStrategy.never;
+}
+
+class ImageResponse {
+  Uint8List imageData;
+  String? error;
+  ImageResponse({required this.imageData, required this.error});
 }
