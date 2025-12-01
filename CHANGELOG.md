@@ -20,3 +20,6 @@
 * Added `FastCachedVideo` widget to cache and play videos.
 * Added `FastCachedLottie` widget to cache and play lottie animations.
 * Updated dependencies.
+
+## 1.0.7
+* Cache directory changed to "ApplicationCacheDirectory"
