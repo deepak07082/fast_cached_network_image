@@ -368,7 +368,7 @@ class FastCachedImageConfig {
 
     clearCacheAfter ??= const Duration(days: 7);
 
-    final rootDir = await getApplicationDocumentsDirectory();
+    final rootDir = await getApplicationCacheDirectory();
     _cacheDir = Directory('${rootDir.path}/${subDir ?? 'fast_cache_image'}');
 
     if (!_cacheDir!.existsSync()) {
