@@ -23,3 +23,6 @@
 
 ## 1.0.7
 * Cache directory changed to "ApplicationCacheDirectory"
+
+## 1.0.8
+* Code optimization
