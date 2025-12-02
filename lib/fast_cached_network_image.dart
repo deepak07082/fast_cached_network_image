@@ -5,3 +5,5 @@ export 'src/models/fast_cache_progress_data.dart';
 export 'src/fast_cached_lottie.dart';
 export 'src/fast_cached_video.dart';
 export 'src/fast_cached_video_controller.dart';
+export 'src/fast_cache_config.dart';
+export 'src/fast_cache_helper.dart';

@@ -47,8 +47,10 @@ class _MyAppState extends State<MyApp> {
                 height: 150,
                 width: 150,
                 decoration: BoxDecoration(
-                    image:
-                        DecorationImage(image: FastCachedImageProvider(url1))),
+                  image: DecorationImage(
+                    image: FastCachedImageProvider(url1),
+                  ),
+                ),
               ),
               SizedBox(
                 height: 150,
@@ -61,9 +63,6 @@ class _MyAppState extends State<MyApp> {
                     return Text(stacktrace.toString());
                   },
                   loadingBuilder: (context, progress) {
-                    debugPrint(
-                      'Progress: ${progress.isDownloading} ${progress.downloadedBytes} / ${progress.totalBytes}',
-                    );
                     return Container(
                       color: Colors.yellow,
                       child: Stack(
@@ -112,13 +111,6 @@ class _MyAppState extends State<MyApp> {
                 child: FastCachedLottie(
                   url: lottieUrl,
                   fit: BoxFit.cover,
-                  loadingBuilder: (context, progress) {
-                    return Center(
-                      child: CircularProgressIndicator(
-                        value: progress.progressPercentage.value,
-                      ),
-                    );
-                  },
                 ),
               ),
               const SizedBox(height: 12),

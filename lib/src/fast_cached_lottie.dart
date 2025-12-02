@@ -1,14 +1,9 @@
 import 'dart:async';
-
-import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
 import '../fast_cached_network_image.dart';
 
-/// The fast cached lottie implementation.
-@immutable
 class FastCachedLottie extends StatefulWidget {
   ///[url] is the url of the lottie file (json or zip).
   final String url;
@@ -22,12 +17,6 @@ class FastCachedLottie extends StatefulWidget {
     Object error,
     StackTrace? stackTrace,
   )? errorBuilder;
-
-  ///[loadingBuilder] can be used to show a custom loading widget.
-  final Widget Function(
-    BuildContext context,
-    FastCachedProgressData progressData,
-  )? loadingBuilder;
 
   ///[width] can be used to set the width of the lottie.
   final double? width;
@@ -58,7 +47,6 @@ class FastCachedLottie extends StatefulWidget {
     required this.url,
     this.headers,
     this.errorBuilder,
-    this.loadingBuilder,
     this.width,
     this.height,
     this.fit,
@@ -77,18 +65,12 @@ class FastCachedLottie extends StatefulWidget {
 
 class _FastCachedLottieState extends State<FastCachedLottie>
     with TickerProviderStateMixin {
-  ImageResponse? _imageResponse;
-  late FastCachedProgressData _progressData;
+  FileModel? _imageResponse;
 
   @override
   void initState() {
     super.initState();
-    _progressData = FastCachedProgressData(
-      progressPercentage: ValueNotifier(0),
-      totalBytes: null,
-      downloadedBytes: 0,
-      isDownloading: false,
-    );
+
     _loadAsync(widget.url, widget.headers);
   }
 
@@ -106,121 +88,21 @@ class _FastCachedLottieState extends State<FastCachedLottie>
   }
 
   Future<void> _loadAsync(String url, Map<String, dynamic>? headers) async {
-    FastCachedImageConfig.checkInit();
-
-    if (url.isEmpty || Uri.tryParse(url) == null) {
-      if (mounted) {
-        setState(
-          () => _imageResponse = ImageResponse(
-            imageData: Uint8List.fromList([]),
-            error: 'Invalid url: $url',
-          ),
-        );
-      }
-      return;
-    }
-
-    Uint8List? image = FastCachedImageConfig.getImage(url);
-
-    if (!mounted) return;
-
-    if (image != null) {
-      Future.delayed(widget.fadeInDuration, () {
-        if (mounted) {
-          setState(
-            () => _imageResponse = ImageResponse(imageData: image, error: null),
-          );
-        }
+    var result = await FastCacheHelper.fetchFile(
+      url: url,
+      headers: headers,
+    );
+    if (mounted) {
+      setState(() {
+        _imageResponse = result;
       });
-      return;
-    }
-
-    StreamController chunkEvents = StreamController();
-
-    try {
-      final Uri resolved = Uri.base.resolve(url);
-      _progressData.isDownloading = true;
-      if (widget.loadingBuilder != null && mounted) {
-        widget.loadingBuilder!(context, _progressData);
-      }
-
-      Response response = await FastCachedImageConfig.dio.get(
-        url,
-        options: Options(responseType: ResponseType.bytes, headers: headers),
-        onReceiveProgress: (int received, int total) {
-          if (received < 0 || total < 0) return;
-          if (widget.loadingBuilder != null) {
-            _progressData.downloadedBytes = received;
-            _progressData.totalBytes = total;
-            _progressData.progressPercentage.value =
-                double.parse((received / total).toStringAsFixed(2));
-            if (mounted) widget.loadingBuilder!(context, _progressData);
-          }
-          chunkEvents.add(
-            ImageChunkEvent(
-              cumulativeBytesLoaded: received,
-              expectedTotalBytes: total,
-            ),
-          );
-        },
-      );
-
-      final Uint8List bytes = response.data;
-
-      if (response.statusCode != 200) {
-        String error = NetworkImageLoadException(
-          statusCode: response.statusCode ?? 0,
-          uri: resolved,
-        ).toString();
-        if (mounted) {
-          setState(
-            () => _imageResponse =
-                ImageResponse(imageData: Uint8List.fromList([]), error: error),
-          );
-        }
-        return;
-      }
-
-      _progressData.isDownloading = false;
-
-      if (bytes.isEmpty && mounted) {
-        setState(
-          () => _imageResponse =
-              ImageResponse(imageData: bytes, error: 'Lottie file is empty.'),
-        );
-        return;
-      }
-      if (mounted) {
-        setState(
-          () => _imageResponse = ImageResponse(imageData: bytes, error: null),
-        );
-      }
-
-      FastCachedImageConfig.saveImage(url, bytes);
-    } catch (e) {
-      if (mounted) {
-        setState(
-          () => _imageResponse = ImageResponse(
-            imageData: Uint8List.fromList([]),
-            error: e.toString(),
-          ),
-        );
-      }
-    } finally {
-      if (!chunkEvents.isClosed) await chunkEvents.close();
-    }
-  }
-
-  void _logErrors(dynamic error) {
-    if (widget.errorBuilder != null) {
-      debugPrint('FastCachedLottie: $error');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_imageResponse?.error != null && widget.errorBuilder != null) {
-      _logErrors(_imageResponse?.error);
+      debugPrint('FastCachedLottie: ${_imageResponse?.error}');
       return widget.errorBuilder!(
         context,
         Object,
@@ -231,59 +113,27 @@ class _FastCachedLottieState extends State<FastCachedLottie>
     return SizedBox(
       width: widget.width,
       height: widget.height,
-      child: Stack(
-        alignment: Alignment.center,
-        fit: StackFit.passthrough,
-        children: [
-          // // Loading Effect (Builder > Shimmer)
-          // if (_imageResponse == null)
-          //   widget.loadingBuilder != null
-          //       ? ValueListenableBuilder(
-          //           valueListenable: _progressData.progressPercentage,
-          //           builder: (context, p, c) {
-          //             return widget.loadingBuilder!(context, _progressData);
-          //           },
-          //         )
-          //       : Shimmer.fromColors(
-          //           baseColor: Colors.grey[300]!,
-          //           highlightColor: Colors.grey[100]!,
-          //           child: Container(
-          //             width: widget.width,
-          //             height: widget.height,
-          //             color: Colors.white,
-          //           ),
-          //         ),
-
-          // // Actual Lottie with FadeIn
-          AnimatedOpacity(
-            opacity: _imageResponse != null ? 1.0 : 0.0,
-            duration: widget.fadeInDuration,
-            child: _imageResponse == null
-                ? const SizedBox()
-                : Lottie.memory(
-                    _imageResponse!.imageData,
-                    width: widget.width,
-                    height: widget.height,
-                    fit: widget.fit,
-                    alignment: widget.alignment,
-                    repeat: widget.repeat,
-                    onLoaded: widget.onLoaded,
-                    animate: widget.animate,
-                    controller: widget.controller,
-                    errorBuilder: (context, error, stackTrace) {
-                      _logErrors(error);
-                      FastCachedImageConfig.deleteCachedImage(
-                        imageUrl: widget.url,
-                        showLog: true,
-                      );
-                      return widget.errorBuilder != null
-                          ? widget.errorBuilder!(context, error, stackTrace)
-                          : const SizedBox();
-                    },
-                  ),
-          ),
-        ],
-      ),
+      child: _imageResponse == null
+          ? const SizedBox()
+          : Lottie.file(
+              _imageResponse!.filePath!,
+              width: widget.width,
+              height: widget.height,
+              fit: widget.fit,
+              alignment: widget.alignment,
+              repeat: widget.repeat,
+              onLoaded: widget.onLoaded,
+              animate: widget.animate,
+              controller: widget.controller,
+              errorBuilder: (context, error, stackTrace) {
+                FastCachedImageConfig.deleteCachedImage(
+                  imageUrl: widget.url,
+                );
+                return widget.errorBuilder != null
+                    ? widget.errorBuilder!(context, error, stackTrace)
+                    : const SizedBox();
+              },
+            ),
     );
   }
 }

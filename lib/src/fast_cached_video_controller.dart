@@ -1,15 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:dio/dio.dart';
-import 'package:fast_cache_network_image/fast_cached_network_image.dart'
-    show FastCachedVideo;
-import 'package:fast_cache_network_image/src/fast_cached_video.dart'
-    show FastCachedVideo;
 import 'package:flutter/material.dart';
-import './fast_cached_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:video_player/video_player.dart';
+import 'fast_cache_helper.dart';
 
 /// State for [FastCachedVideoController]
 class FastCachedVideoValue {
@@ -47,7 +42,6 @@ class FastCachedVideoValue {
   }
 }
 
-/// Controller for [FastCachedVideo].
 /// Manages downloading, caching, and the underlying [VideoPlayerController].
 class FastCachedVideoController extends ValueNotifier<FastCachedVideoValue> {
   final String url;
@@ -77,41 +71,12 @@ class FastCachedVideoController extends ValueNotifier<FastCachedVideoValue> {
     value = value.copyWith(isLoading: true, error: null, progress: 0);
 
     try {
-      FastCachedImageConfig.checkInit();
-
-      if (url.isEmpty || Uri.tryParse(url) == null) {
-        value = value.copyWith(
-          isLoading: false,
-          error: 'Invalid url: $url',
-        );
-        return;
-      }
-
-      final file = FastCachedImageConfig.getCachedFile(url);
-
-      if (file.existsSync()) {
-        await _initializePlayer(file);
-      } else {
-        await _downloadAndCache(url, file);
-      }
-    } catch (e) {
-      value = value.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
-    }
-  }
-
-  Future<void> _downloadAndCache(String url, File file) async {
-    StreamController chunkEvents = StreamController();
-
-    try {
-      final Uri resolved = Uri.base.resolve(url);
-
-      Response response = await FastCachedImageConfig.dio.get(
-        url,
-        options: Options(responseType: ResponseType.bytes, headers: headers),
-        onReceiveProgress: (int received, int total) {
+      var result = await FastCacheHelper.fetchFile(
+        url: url,
+        headers: headers,
+        loadingBuilder: (processData) {
+          var received = processData.downloadedBytes;
+          var total = processData.totalBytes ?? 0;
           if (received < 0 || total < 0) return;
           if (_isDisposed) return;
           value = value.copyWith(
@@ -120,25 +85,14 @@ class FastCachedVideoController extends ValueNotifier<FastCachedVideoValue> {
         },
       );
 
-      final Uint8List bytes = response.data;
-
-      if (response.statusCode != 200) {
-        throw NetworkImageLoadException(
-          statusCode: response.statusCode ?? 0,
-          uri: resolved,
-        );
+      if (result.filePath != null) {
+        await _initializePlayer(result.filePath!);
       }
-
-      if (bytes.isEmpty) {
-        throw Exception('Video file is empty.');
-      }
-
-      FastCachedImageConfig.saveImage(url, bytes);
-      await _initializePlayer(file);
     } catch (e) {
-      rethrow;
-    } finally {
-      if (!chunkEvents.isClosed) await chunkEvents.close();
+      value = value.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
     }
   }
 

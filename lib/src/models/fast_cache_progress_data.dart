@@ -1,4 +1,5 @@
-import 'package:flutter/cupertino.dart';
+import 'dart:io';
+import 'package:flutter/material.dart';
 
 class FastCachedProgressData {
   ///[downloadedBytes] represents the downloaded size(in bytes) of the image. This value increases and reaches the [totalBytes] when image is fully downloaded.
@@ -20,4 +21,10 @@ class FastCachedProgressData {
     required this.downloadedBytes,
     required this.isDownloading,
   });
+}
+
+class FileModel {
+  File? filePath;
+  String? error;
+  FileModel({required this.filePath, required this.error});
 }
