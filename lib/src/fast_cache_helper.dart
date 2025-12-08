@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
@@ -18,8 +20,11 @@ class FastCacheHelper {
       );
     }
 
+    // ✅ If cached already, ensure extension before returning
     if (FastCachedImageConfig.isCached(imageUrl: url)) {
       var image = FastCachedImageConfig.getCachedFile(url);
+      image = _ensureFileHasExtension(image, url);
+
       if (image.existsSync()) {
         return FileModel(
           filePath: image,
@@ -43,15 +48,18 @@ class FastCacheHelper {
 
       Response response = await FastCachedImageConfig.dio.get(
         url,
-        options: Options(responseType: ResponseType.bytes, headers: headers),
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: headers,
+        ),
         onReceiveProgress: (int received, int total) {
           if (received < 0 || total < 0) return;
-          if (loadingBuilder != null) {
-            _progressData?.downloadedBytes = received;
-            _progressData?.totalBytes = total;
-            _progressData?.progressPercentage.value =
+          if (_progressData != null) {
+            _progressData.downloadedBytes = received;
+            _progressData.totalBytes = total;
+            _progressData.progressPercentage.value =
                 double.parse((received / total).toStringAsFixed(2));
-            loadingBuilder.call(_progressData!);
+            loadingBuilder?.call(_progressData);
           }
         },
       );
@@ -64,21 +72,27 @@ class FastCacheHelper {
             uri: resolved,
           ).toString(),
         );
-      } else {
-        if (response.data.isEmpty) {
-          return FileModel(
-            filePath: null,
-            error: 'downloaded file byte is empty.',
-          );
-        }
-        FastCachedImageConfig.saveImage(url, response.data);
-        var image = FastCachedImageConfig.getCachedFile(url);
-        if (image.existsSync()) {
-          return FileModel(
-            filePath: image,
-            error: null,
-          );
-        }
+      }
+
+      if (response.data.isEmpty) {
+        return FileModel(
+          filePath: null,
+          error: 'downloaded file byte is empty.',
+        );
+      }
+
+      // ✅ Save
+      FastCachedImageConfig.saveImage(url, response.data);
+
+      // ✅ Read + enforce extension
+      var image = FastCachedImageConfig.getCachedFile(url);
+      image = _ensureFileHasExtension(image, url);
+
+      if (image.existsSync()) {
+        return FileModel(
+          filePath: image,
+          error: null,
+        );
       }
     } catch (e) {
       return FileModel(
@@ -86,6 +100,30 @@ class FastCacheHelper {
         error: e.toString(),
       );
     }
+
     return FileModel(filePath: null, error: 'Unknown error');
+  }
+
+  // ------------------ helpers ------------------
+
+  static String _getExtensionFromUrl(String url) {
+    return url.split('/').last.split('.').last;
+  }
+
+  static File _ensureFileHasExtension(File file, String url) {
+    if (file.path.contains('.')) return file;
+
+    final ext = _getExtensionFromUrl(url);
+    if (ext.isEmpty) return file;
+
+    final newPath = '${file.path}.$ext';
+    final newFile = File(newPath);
+
+    if (file.existsSync() && !newFile.existsSync()) {
+      file.renameSync(newPath);
+      return newFile;
+    }
+
+    return newFile.existsSync() ? newFile : file;
   }
 }
