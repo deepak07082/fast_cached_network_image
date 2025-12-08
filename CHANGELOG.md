@@ -26,3 +26,6 @@
 
 ## 1.0.8
 * Code optimization
+
+## 1.0.9
+* cache file saving properly in IOS issue fix
