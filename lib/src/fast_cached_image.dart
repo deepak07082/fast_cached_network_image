@@ -233,7 +233,12 @@ class FastCachedImageProvider extends ImageProvider<NetworkImage>
   /// Creates an object that fetches the image at the given URL.
   ///
   /// The arguments [url] and [scale] must not be null.
-  const FastCachedImageProvider(this.url, {this.scale = 1.0, this.headers});
+  const FastCachedImageProvider(
+    this.url, {
+    required this.fallBackUrl,
+    this.scale = 1.0,
+    this.headers,
+  });
 
   @override
   final String url;
@@ -243,6 +248,8 @@ class FastCachedImageProvider extends ImageProvider<NetworkImage>
 
   @override
   final Map<String, String>? headers;
+
+  final String? fallBackUrl;
 
   @override
   Future<FastCachedImageProvider> obtainKey(ImageConfiguration configuration) {
@@ -278,7 +285,7 @@ class FastCachedImageProvider extends ImageProvider<NetworkImage>
       assert(key == this);
 
       var result = await FastCacheHelper.fetchFile(
-        url: url,
+        url: url == '' ? (fallBackUrl ?? '') : url,
         headers: headers,
         loadingBuilder: (progress) {
           chunkEvents.add(
