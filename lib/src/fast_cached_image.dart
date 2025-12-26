@@ -297,6 +297,21 @@ class FastCachedImageProvider extends ImageProvider<NetworkImage>
         },
       );
 
+      if (result.error != null) {
+        result = await FastCacheHelper.fetchFile(
+          url: fallBackUrl ?? '',
+          headers: headers,
+          loadingBuilder: (progress) {
+            chunkEvents.add(
+              ImageChunkEvent(
+                cumulativeBytesLoaded: progress.downloadedBytes,
+                expectedTotalBytes: progress.totalBytes,
+              ),
+            );
+          },
+        );
+      }
+
       final ui.ImmutableBuffer buffer =
           await ui.ImmutableBuffer.fromFilePath(result.filePath!.path);
       return decode(buffer);
