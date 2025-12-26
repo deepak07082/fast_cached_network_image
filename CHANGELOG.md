@@ -1,3 +1,6 @@
+## 1.0.11
+* FastCachedImageProvider fallback url bug fix
+
 ## 1.0.10
 * FastCachedImageProvider fallback url added
 
