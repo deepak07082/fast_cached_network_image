@@ -93,6 +93,11 @@ class FastCacheHelper {
           filePath: image,
           error: null,
         );
+      } else {
+        return FileModel(
+          filePath: null,
+          error: 'file not found',
+        );
       }
     } catch (e) {
       return FileModel(
@@ -100,8 +105,6 @@ class FastCacheHelper {
         error: e.toString(),
       );
     }
-
-    return FileModel(filePath: null, error: 'Unknown error');
   }
 
   // ------------------ helpers ------------------

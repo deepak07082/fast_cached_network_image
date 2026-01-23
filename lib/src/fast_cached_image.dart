@@ -297,7 +297,7 @@ class FastCachedImageProvider extends ImageProvider<NetworkImage>
         },
       );
 
-      if (result.error != null) {
+      if (result.error != null || result.filePath == null) {
         result = await FastCacheHelper.fetchFile(
           url: fallBackUrl ?? '',
           headers: headers,
