@@ -1,42 +1,49 @@
+## 1.0.12
+
+- flutter V3.41 code migration
+
 ## 1.0.11
-* FastCachedImageProvider fallback url bug fix
+
+- FastCachedImageProvider fallback url bug fix
 
 ## 1.0.10
-* FastCachedImageProvider fallback url added
+
+- FastCachedImageProvider fallback url added
 
 ## 1.0.9
-* cache file saving properly in IOS issue fix
 
+- cache file saving properly in IOS issue fix
 
-## 1.0.8
-* Code optimization
+## 1.0.8V
 
+- Code optimization
 
 ## 1.0.7
-* Cache directory changed to "ApplicationCacheDirectory"
 
+- Cache directory changed to "ApplicationCacheDirectory"
 
 ## 1.0.6
-* Added `FastCachedVideo` widget to cache and play videos.
-* Added `FastCachedLottie` widget to cache and play lottie animations.
-* Updated dependencies.
 
+- Added `FastCachedVideo` widget to cache and play videos.
+- Added `FastCachedLottie` widget to cache and play lottie animations.
+- Updated dependencies.
 
 ## 1.0.4
-* Redundant code removed and the code has been optimized.
 
+- Redundant code removed and the code has been optimized.
 
 ## 1.0.5
-* Redundant code removed and the code has been optimized.
 
+- Redundant code removed and the code has been optimized.
 
 ## 1.0.3
-* Bug Fixes
 
+- Bug Fixes
 
 ## 1.0.2
-* Bug Fixes
 
+- Bug Fixes
 
 ## 1.0.1+1
-* Initial release.
+
+- Initial release.
