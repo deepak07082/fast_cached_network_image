@@ -10,23 +10,22 @@ topics:
   - download
   - network
 
-
 environment:
-  sdk: '>=2.18.0 <4.0.0'
-  flutter: ">=3.27.0"
+  sdk: ">=2.18.0 <4.0.0"
+  flutter: ">=3.38.0"
 
 dependencies:
   flutter:
     sdk: flutter
 
-  dio: ^5.9.0
+  dio: ^5.9.2
   lottie: ^3.3.2
   path_provider: ^2.1.5
   shimmer: ^3.0.0
-  uuid: ^4.5.2
-  video_player: ^2.10.1
+  uuid: ^4.5.3
+  video_player: ^2.11.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  lints: ^6.0.0
+  lints: ^6.1.0

@@ -16,7 +16,7 @@ class FastCacheHelper {
     if (url.isEmpty || Uri.tryParse(url) == null) {
       return FileModel(
         filePath: null,
-        error: 'Invalid url: $url',
+        error: 'URL:  $url' + 'Invalid url',
       );
     }
 
@@ -34,7 +34,6 @@ class FastCacheHelper {
     }
 
     try {
-      final Uri resolved = Uri.base.resolve(url);
       FastCachedProgressData? _progressData;
       if (loadingBuilder != null) {
         _progressData = FastCachedProgressData(
@@ -69,7 +68,7 @@ class FastCacheHelper {
           filePath: null,
           error: NetworkImageLoadException(
             statusCode: response.statusCode ?? -1,
-            uri: resolved,
+            uri: Uri.parse(url),
           ).toString(),
         );
       }
@@ -77,7 +76,7 @@ class FastCacheHelper {
       if (response.data.isEmpty) {
         return FileModel(
           filePath: null,
-          error: 'downloaded file byte is empty.',
+          error: 'URL:  $url' + 'downloaded file byte is empty.',
         );
       }
 
@@ -96,15 +95,17 @@ class FastCacheHelper {
       } else {
         return FileModel(
           filePath: null,
-          error: 'file not found',
+          error: 'URL:  $url' + 'file not found',
         );
       }
     } catch (e) {
       return FileModel(
         filePath: null,
-        error: e.toString(),
+        error: 'URL:  $url' + e.toString(),
       );
     }
+
+    // return FileModel(filePath: null, error: 'URL:  $url' + 'Unknown error');
   }
 
   // ------------------ helpers ------------------

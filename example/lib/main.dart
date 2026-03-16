@@ -48,7 +48,10 @@ class _MyAppState extends State<MyApp> {
                 width: 150,
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: FastCachedImageProvider(url1),
+                    image: FastCachedImageProvider(
+                      url1,
+                      fallBackUrl: url1,
+                    ),
                   ),
                 ),
               ),

@@ -1,3 +1,4 @@
+import 'package:fast_cache_network_image/src/fast_cache_config.dart';
 import 'package:fast_cache_network_image/src/fast_cached_image.dart';
 import 'package:flutter_test/flutter_test.dart';
 
